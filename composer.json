@@ -1,0 +1,13 @@
+{
+    "name": "jugger-php/jugger-query",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "irpsv",
+            "email": "i.rpsv@live.com"
+        }
+    ],
+    "require": {
+        "jugger-php/jugger-criteria": "^1"
+    }
+}
