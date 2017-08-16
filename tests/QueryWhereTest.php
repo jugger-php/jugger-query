@@ -3,7 +3,8 @@
 namespace tests;
 
 use PHPUnit\Framework\TestCase;
-use jugger\criteria\MysqlCriteriaBuilder;
+use jugger\query\Query;
+use jugger\query\MysqlQueryBuilder;
 use jugger\criteria\SimpleLogicCriteria;
 use jugger\criteria\InCriteria;
 use jugger\criteria\LikeCriteria;
@@ -18,56 +19,57 @@ class QueryWhereTest extends TestCase
     protected function createBuilder()
     {
         $driver = new \mysqli('localhost', 'root', '');
-        return new MysqlCriteriaBuilder($driver);
+        return new MysqlQueryBuilder($driver);
     }
 
     public function testGeneral()
     {
-		$criteria = new LogicCriteria("or");
-        $criteria->add([
+		$query = (new Query)->from(['tableName']);
+        $query->where(
             new LogicCriteria("and", [
                 new EqualCriteria('col1', 1),
                 new LikeCriteria('col2', '%2%'),
-            ]),
-            new LogicCriteria("and", [
+            ]))
+            ->orWhere(new LogicCriteria("and", [
                 new RegexpCriteria('col3', '(\d+)'),
                 new CompareCriteria('col4', '<', 4),
                 new BetweenCriteria('col5', 123, 456),
-            ])
-        ]);
-        $builder = $this->createBuilder();
-        $sql = $builder->build($criteria);
+            ]));
+
+        $sql = $this->createBuilder()->build($query);
         $this->assertEquals(
             $sql,
-            "((`col1` = '1') AND (`col2` LIKE '%2%')) OR ((`col3` REGEXP '(\\\\d+)') AND (`col4` < '4') AND (`col5` BETWEEN '123' AND '456'))"
+            "SELECT * FROM `tableName` WHERE ((`col1` = '1') AND (`col2` LIKE '%2%')) OR ((`col3` REGEXP '(\\\\d+)') AND (`col4` < '4') AND (`col5` BETWEEN '123' AND '456'))"
         );
     }
 
     public function testLike()
     {
         $crit = new LikeCriteria("col", "%value%");
+        $query = (new Query)->from('table')->where($crit);
         $builder = $this->createBuilder();
         $this->assertEquals(
-            $builder->build($crit),
-            "`col` LIKE '%value%'"
+            $builder->build($query),
+            "SELECT * FROM table WHERE `col` LIKE '%value%'"
         );
         $this->assertEquals(
             $builder->buildLike($crit),
-            $builder->build($crit)
+            $builder->buildWhere($crit)
         );
     }
 
     public function testEqual()
     {
         $crit = new EqualCriteria("col", "%value%");
+        $query = (new Query)->from('table')->where($crit);
         $builder = $this->createBuilder();
         $this->assertEquals(
-            $builder->build($crit),
-            "`col` = '%value%'"
+            $builder->build($query),
+            "SELECT * FROM table WHERE `col` = '%value%'"
         );
         $this->assertEquals(
             $builder->buildEqual($crit),
-            $builder->build($crit)
+            $builder->buildWhere($crit)
         );
     }
 
@@ -80,57 +82,60 @@ class QueryWhereTest extends TestCase
         $crit->add([
             new EqualCriteria("col", "")
         ]);
-
+        $query = (new Query)->from('table')->where($crit);
         $builder = $this->createBuilder();
         $this->assertEquals(
-            $builder->build($crit),
-            "(`col` LIKE '') AND (`col` = '')"
+            $builder->build($query),
+            "SELECT * FROM table WHERE (`col` LIKE '') AND (`col` = '')"
         );
         $this->assertEquals(
             $builder->buildLogic($crit),
-            $builder->build($crit)
+            $builder->buildWhere($crit)
         );
     }
 
     public function testCompare()
     {
         $crit = new CompareCriteria("col", ">", 1);
+        $query = (new Query)->from('table')->where($crit);
         $builder = $this->createBuilder();
         $this->assertEquals(
-            $builder->build($crit),
-            "`col` > '1'"
+            $builder->build($query),
+            "SELECT * FROM table WHERE `col` > '1'"
         );
         $this->assertEquals(
             $builder->buildCompare($crit),
-            $builder->build($crit)
+            $builder->buildWhere($crit)
         );
     }
 
     public function testRegexp()
     {
         $crit = new RegexpCriteria("col", "/(\\d+)/");
+        $query = (new Query)->from('table')->where($crit);
         $builder = $this->createBuilder();
         $this->assertEquals(
-            $builder->build($crit),
-            "`col` REGEXP '/(\\\\d+)/'"
+            $builder->build($query),
+            "SELECT * FROM table WHERE `col` REGEXP '/(\\\\d+)/'"
         );
         $this->assertEquals(
             $builder->buildRegexp($crit),
-            $builder->build($crit)
+            $builder->buildWhere($crit)
         );
     }
 
     public function testBetween()
     {
         $crit = new BetweenCriteria("col", 10, 20);
+        $query = (new Query)->from('table')->where($crit);
         $builder = $this->createBuilder();
         $this->assertEquals(
-            $builder->build($crit),
-            "`col` BETWEEN '10' AND '20'"
+            $builder->build($query),
+            "SELECT * FROM table WHERE `col` BETWEEN '10' AND '20'"
         );
         $this->assertEquals(
             $builder->buildBetween($crit),
-            $builder->build($crit)
+            $builder->buildWhere($crit)
         );
     }
 
@@ -144,35 +149,38 @@ class QueryWhereTest extends TestCase
                 '@column3' => [1,2,3],
             ]
         ]);
+        $query = (new Query)->from('table')->where($crit);
         $builder = $this->createBuilder();
         $this->assertEquals(
-            $builder->build($crit),
-            "(`column1` = 'value') AND ((`column2` LIKE 'value') OR (`column3` IN (1, 2, 3)))"
+            $builder->build($query),
+            "SELECT * FROM table WHERE (`column1` = 'value') AND ((`column2` LIKE 'value') OR (`column3` IN (1, 2, 3)))"
         );
     }
 
     public function testIn()
     {
         $crit = new InCriteria("column", [1,2,3]);
+        $query = (new Query)->from('table')->where($crit);
         $builder = $this->createBuilder();
         $this->assertEquals(
-            $builder->build($crit),
-            "`column` IN (1, 2, 3)"
+            $builder->build($query),
+            "SELECT * FROM table WHERE `column` IN (1, 2, 3)"
         );
         $this->assertEquals(
             $builder->buildIn($crit),
-            $builder->build($crit)
+            $builder->buildWhere($crit)
         );
 
         $crit = new InCriteria("column", "string");
+        $query = (new Query)->from('table')->where($crit);
         $builder = $this->createBuilder();
         $this->assertEquals(
-            $builder->build($crit),
-            "`column` IN (string)"
+            $builder->build($query),
+            "SELECT * FROM table WHERE `column` IN (string)"
         );
         $this->assertEquals(
             $builder->buildIn($crit),
-            $builder->build($crit)
+            $builder->buildWhere($crit)
         );
     }
 }
