@@ -2,18 +2,21 @@
 
 namespace jugger\query;
 
+use jugger\criteria\Criteria;
+use jugger\criteria\LogicCriteria;
+
 class Query
 {
-    protected $select = "*";
-    protected $distinct;
-    protected $from;
-    protected $joins;
-    protected $where;
-    protected $orderBy;
-    protected $having;
-    protected $groupBy;
-    protected $limit;
-    protected $offset;
+    public $select = "*";
+    public $distinct;
+    public $from;
+    public $joins;
+    public $where;
+    public $orderBy;
+    public $having;
+    public $groupBy;
+    public $limit;
+    public $offset;
 
     public function __construct()
     {
@@ -50,7 +53,7 @@ class Query
 
     public function join(string $type, string $table, string $on): self
     {
-        $this->join[] = [$type, $table, $on];
+        $this->joins[] = [$type, $table, $on];
         return $this;
     }
 
@@ -78,7 +81,7 @@ class Query
     public function andWhere(Criteria $criteria): self
     {
         if ($this->where) {
-            $this->where = new LoginCriteria("and", [
+            $this->where = new LogicCriteria("and", [
                 $this->where,
                 $criteria
             ]);
@@ -86,12 +89,13 @@ class Query
         else {
             $this->where = $criteria;
         }
+        return $this;
     }
 
     public function orWhere(Criteria $criteria): self
     {
         if ($this->where) {
-            $this->where = new LoginCriteria("or", [
+            $this->where = new LogicCriteria("or", [
                 $this->where,
                 $criteria
             ]);
@@ -99,6 +103,7 @@ class Query
         else {
             $this->where = $criteria;
         }
+        return $this;
     }
 
     public function having(Criteria $criteria): self
@@ -110,7 +115,7 @@ class Query
     public function andHaving(Criteria $criteria): self
     {
         if ($this->having) {
-            $this->having = new LoginCriteria("and", [
+            $this->having = new LogicCriteria("and", [
                 $this->having,
                 $criteria
             ]);
@@ -118,12 +123,13 @@ class Query
         else {
             $this->having = $criteria;
         }
+        return $this;
     }
 
     public function orHaving(Criteria $criteria): self
     {
         if ($this->having) {
-            $this->having = new LoginCriteria("or", [
+            $this->having = new LogicCriteria("or", [
                 $this->having,
                 $criteria
             ]);
@@ -131,6 +137,7 @@ class Query
         else {
             $this->having = $criteria;
         }
+        return $this;
     }
 
     public function orderBy(string $value): self

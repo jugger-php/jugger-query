@@ -22,7 +22,9 @@ class MysqlQueryBuilder implements QueryBuilder
 
     public function build(Query $query): string
     {
-        $sql  = "SELECT ". $this->buildSelect($query->select);
+        $sql  = "SELECT "
+            .$this->buildDistinct($query->distinct)
+            .$this->buildSelect($query->select);
         $sql .= " FROM ". $this->buildFrom($query->from);
         if ($query->joins) {
             foreach ($query->joins as $join) {
@@ -47,6 +49,14 @@ class MysqlQueryBuilder implements QueryBuilder
         return $sql;
     }
 
+    public function buildDistinct(?bool $distinct)
+    {
+        if ($distinct) {
+            return "DISTINCT ";
+        }
+        return "";
+    }
+
     public function buildSelect($select)
     {
         if (empty($select)) {
@@ -62,14 +72,14 @@ class MysqlQueryBuilder implements QueryBuilder
                     $value = "({$this->build($value)})";
                 }
                 else {
-                    $value = $this->buildColumn($value);
+                    $value = $this->quote($value);
                 }
 
                 if (is_integer($key)) {
                     $ret[] = $value;
                 }
                 else  {
-                    $key = $this->buildColumn($key);
+                    $key = $this->quote($key);
                     $ret[] = "{$value} AS {$key}";
                 }
             }
@@ -92,14 +102,14 @@ class MysqlQueryBuilder implements QueryBuilder
                     $value = "({$this->build($value)})";
                 }
                 else {
-                    $value = $this->buildColumn($value);
+                    $value = $this->quote($value);
                 }
 
                 if (is_integer($key)) {
                     $ret[] = $value;
                 }
                 else  {
-                    $key = $this->buildColumn($key);
+                    $key = $this->quote($key);
                     $ret[] = "{$value} AS {$key}";
                 }
             }
@@ -114,8 +124,8 @@ class MysqlQueryBuilder implements QueryBuilder
     {
         list($type, $table, $on) = $join;
         $type = strtoupper($type);
-        $table = $this->buildColumn($table);
-        return "{$type} JOIN {$table} ON {$on}";
+        $table = $this->quote($table);
+        return " {$type} JOIN {$table} ON {$on}";
     }
 
     public function buildGroupBy(string $value)
@@ -167,7 +177,7 @@ class MysqlQueryBuilder implements QueryBuilder
         }
     }
 
-    public function buildColumn(string $name)
+    public function quote(string $name)
     {
         return "`{$name}`";
     }
@@ -182,7 +192,7 @@ class MysqlQueryBuilder implements QueryBuilder
         $operands = [];
         $operator = strtoupper($criteria->getOperator());
         foreach ($criteria->getValue() as $item) {
-            $sql = $this->build($item);
+            $sql = $this->buildWhere($item);
             $operands[] = "({$sql})";
         }
         return join($operands, " {$operator} ");
@@ -190,7 +200,7 @@ class MysqlQueryBuilder implements QueryBuilder
 
     public function buildBetween(BetweenCriteria $criteria)
     {
-        $column = $this->buildColumn(
+        $column = $this->quote(
             $criteria->getColumn()
         );
         $min = (float) $criteria->getMin();
@@ -237,7 +247,7 @@ class MysqlQueryBuilder implements QueryBuilder
 
     public function buildIn(InCriteria $criteria)
     {
-        $column = $this->buildColumn(
+        $column = $this->quote(
             $criteria->getColumn()
         );
         $value = $criteria->getValue();
@@ -256,7 +266,7 @@ class MysqlQueryBuilder implements QueryBuilder
     protected function buildWithOperator($column, $operator, $value)
     {
         $value = $this->escape($value);
-        $column = $this->buildColumn($column);
+        $column = $this->quote($column);
         return "{$column} {$operator} '{$value}'";
     }
 }
