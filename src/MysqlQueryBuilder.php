@@ -257,6 +257,9 @@ class MysqlQueryBuilder implements QueryBuilder
                 array_map([$this, 'escape'], $value)
             );
         }
+        elseif ($value instanceof Query) {
+            $value = $this->build($value);
+        }
         else {
             $value = $this->escape($value);
         }

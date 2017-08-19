@@ -22,6 +22,19 @@ class QueryWhereTest extends TestCase
         return new MysqlQueryBuilder($driver);
     }
 
+    public function testSubQuery()
+    {
+        $query = (new Query)->from('table');
+        $query->where(new SimpleLogicCriteria([
+            '@id' => (new Query)->select('id')->from('table2'),
+        ]));
+        $builder = $this->createBuilder();
+        $this->assertEquals(
+            $builder->build($query),
+            "SELECT * FROM table WHERE (`id` IN (SELECT id FROM table2))"
+        );
+    }
+
     public function testGeneral()
     {
 		$query = (new Query)->from(['tableName']);
